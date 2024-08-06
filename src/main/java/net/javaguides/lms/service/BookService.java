@@ -34,12 +34,16 @@ public class BookService {
         bookRepository.deleteById(id);
     }
 
+    public List<Book> findByTitle(String title) {
+        return bookRepository.findByTitle(title);
+    }
+
     public Book borrowBook(Long bookId, Long userId) {
         Book book = findById(bookId);
         User user = userRepository.findById(userId).orElse(null);
 
         if (book != null && !book.isBorrowed() && user != null) {
-            book.setBorrowedBy(user);
+            book.setBorrowedBy(user);   // Set the user who borrowed the book
             book.setBorrowed(true);
             return save(book);
         }
@@ -56,5 +60,9 @@ public class BookService {
         }
         // Handle errors (e.g., book not found, book not borrowed)
         return null;
+    }
+
+    public boolean existsById(Long id) {
+        return bookRepository.existsById(id);
     }
 }

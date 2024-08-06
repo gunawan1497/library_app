@@ -1,10 +1,14 @@
 package net.javaguides.lms.controller;
 
+import jakarta.validation.Valid;
+import net.javaguides.lms.dto.ResponseData;
 import net.javaguides.lms.entity.Book;
 import net.javaguides.lms.service.BookService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.Errors;
+import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,66 +26,57 @@ public class BookController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getBook(@PathVariable Long id) {
-        Book book = bookService.findById(id);
-        if (book != null) {
-            return ResponseEntity.ok(book);
-        } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Book not found");
-        }
+    public Book getBook(@Valid @PathVariable("id") Long id) {
+        return bookService.findById(id);
     }
 
     @PostMapping
-    public Book addBook(@RequestBody Book book) {
-        return bookService.save(book);
+    public ResponseEntity<ResponseData<Book>> addBook(@Valid @RequestBody Book book, Errors errors) {
+        ResponseData<Book> responseData = new ResponseData<>();
+
+        if (errors.hasErrors()) {
+            for (ObjectError error : errors.getAllErrors()) {
+                responseData.getMessage().add(error.getDefaultMessage());
+            }
+            responseData.setStatus(false);
+            responseData.setPayload(null);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(responseData);
+        }
+        responseData.setStatus(true);
+        responseData.setPayload(bookService.save(book));
+        return ResponseEntity.ok(responseData);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Book> updateBook(@PathVariable Long id, @RequestBody Book book) {
-        Book existingBook = bookService.findById(id);
-        if (existingBook != null) {
-            // Update the existing book's details
-            existingBook.setTitle(book.getTitle());
-            existingBook.setAuthor(book.getAuthor());
-            existingBook.setBorrowed(book.isBorrowed());
-            existingBook.setBorrowedBy(book.getBorrowedBy());
-            Book updatedBook = bookService.save(existingBook);
-            return ResponseEntity.ok(updatedBook);
-        } else {
-            return ResponseEntity.notFound().build();
+    public ResponseEntity<ResponseData<Book>> updateBook(@Valid @PathVariable Long id, @Valid @RequestBody Book book, Errors errors) {
+        ResponseData<Book> responseData = new ResponseData<>();
+
+        if (errors.hasErrors()) {
+            for (ObjectError error : errors.getAllErrors()) {
+                responseData.getMessage().add(error.getDefaultMessage());
+            }
+            responseData.setStatus(false);
+            responseData.setPayload(null);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(responseData);
         }
+
+        if (!bookService.existsById(id)) {
+            responseData.setStatus(false);
+            responseData.getMessage().add("Book not found");
+            responseData.setPayload(null);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(responseData);
+        }
+
+        book.setId(id); // Ensure the book ID is set to the path variable ID
+        responseData.setStatus(true);
+        responseData.setPayload(bookService.save(book));
+        return ResponseEntity.ok(responseData);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteBook(@PathVariable Long id) {
-        Book book = bookService.findById(id);
-        if (book != null) {
-            bookService.deleteById(id);
-            return ResponseEntity.ok("Book successfully deleted");
-        } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Book not found");
-        }
+    public void deleteBook(@PathVariable Long id) {
+        bookService.deleteById(id);
     }
 
     // ... other endpoints ...
-
-    @PostMapping("/{bookId}/borrow/{userId}")
-    public ResponseEntity<Book> borrowBook(@PathVariable Long bookId, @PathVariable Long userId) {
-        Book borrowedBook = bookService.borrowBook(bookId, userId);
-        if (borrowedBook != null) {
-            return ResponseEntity.ok(borrowedBook);
-        } else {
-            return ResponseEntity.badRequest().build(); // or a more descriptive error response
-        }
-    }
-
-    @PostMapping("/{bookId}/return")
-    public ResponseEntity<Book> returnBook(@PathVariable Long bookId) {
-        Book returnedBook = bookService.returnBook(bookId);
-        if (returnedBook != null) {
-            return ResponseEntity.ok(returnedBook);
-        } else {
-            return ResponseEntity.badRequest().build(); // or a more descriptive error response
-        }
-    }
 }
