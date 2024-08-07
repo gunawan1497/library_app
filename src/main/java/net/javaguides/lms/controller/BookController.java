@@ -26,8 +26,20 @@ public class BookController {
     }
 
     @GetMapping("/{id}")
-    public Book getBook(@Valid @PathVariable("id") Long id) {
-        return bookService.findById(id);
+    public ResponseEntity<ResponseData<Book>> getBook(@PathVariable("id") Long id) {
+        ResponseData<Book> responseData = new ResponseData<>();
+        Book book = bookService.findById(id);
+
+        if (book == null) {
+            responseData.setStatus(false);
+            responseData.getMessage().add("Book not found for ID: " + id);
+            responseData.setPayload(null);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(responseData);
+        }
+
+        responseData.setStatus(true);
+        responseData.setPayload(book);
+        return ResponseEntity.ok(responseData);
     }
 
     @PostMapping
@@ -43,6 +55,7 @@ public class BookController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(responseData);
         }
         responseData.setStatus(true);
+        responseData.getMessage().add("Book added successfully");
         responseData.setPayload(bookService.save(book));
         return ResponseEntity.ok(responseData);
     }
@@ -62,20 +75,32 @@ public class BookController {
 
         if (!bookService.existsById(id)) {
             responseData.setStatus(false);
-            responseData.getMessage().add("Book not found");
+            responseData.getMessage().add("Book not found for ID: " + id);
             responseData.setPayload(null);
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(responseData);
         }
 
         book.setId(id); // Ensure the book ID is set to the path variable ID
         responseData.setStatus(true);
+        responseData.getMessage().add("Book updated successfully");
         responseData.setPayload(bookService.save(book));
         return ResponseEntity.ok(responseData);
     }
 
     @DeleteMapping("/{id}")
-    public void deleteBook(@PathVariable Long id) {
+    public ResponseEntity<ResponseData<Void>> deleteBook(@PathVariable Long id) {
+        ResponseData<Void> responseData = new ResponseData<>();
+
+        if (!bookService.existsById(id)) {
+            responseData.setStatus(false);
+            responseData.getMessage().add("Book not found for ID: " + id);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(responseData);
+        }
+
         bookService.deleteById(id);
+        responseData.setStatus(true);
+        responseData.getMessage().add("Book deleted successfully");
+        return ResponseEntity.ok(responseData);
     }
 
     // ... other endpoints ...
