@@ -4,11 +4,10 @@ import jakarta.validation.Valid;
 import net.javaguides.lms.dto.ResponseData;
 import net.javaguides.lms.entity.Book;
 import net.javaguides.lms.service.BookService;
+import net.javaguides.lms.util.ResponseUtil;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.Errors;
-import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,86 +20,56 @@ public class BookController {
     private BookService bookService;
 
     @GetMapping
-    public List<Book> getAllBooks() {
+    public List<Book> getAllBooks(@RequestParam(required = false) String title, @RequestParam(required = false) String author) {
+        if (title != null && !title.isEmpty()) {
+            return bookService.findByTitleLike(title);
+        }
+        if (author != null && !author.isEmpty()) {
+            return bookService.findByAuthorLike(author);
+        }
+        if (title == null && author == null) {
+            return ResponseUtil.createNotFoundResponse("Please provide a title or author to search for books");
+        }
         return bookService.findAll();
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<ResponseData<Book>> getBook(@PathVariable("id") Long id) {
-        ResponseData<Book> responseData = new ResponseData<>();
         Book book = bookService.findById(id);
 
         if (book == null) {
-            responseData.setStatus(false);
-            responseData.getMessage().add("Book not found for ID: " + id);
-            responseData.setPayload(null);
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(responseData);
+            return ResponseUtil.createNotFoundResponse("Book not found for ID: " + id);
         }
-
-        responseData.setStatus(true);
-        responseData.setPayload(book);
-        return ResponseEntity.ok(responseData);
+        return ResponseUtil.createSuccessResponse(book, "Book retrieved successfully");
     }
 
     @PostMapping
     public ResponseEntity<ResponseData<Book>> addBook(@Valid @RequestBody Book book, Errors errors) {
-        ResponseData<Book> responseData = new ResponseData<>();
-
         if (errors.hasErrors()) {
-            for (ObjectError error : errors.getAllErrors()) {
-                responseData.getMessage().add(error.getDefaultMessage());
-            }
-            responseData.setStatus(false);
-            responseData.setPayload(null);
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(responseData);
+            return ResponseUtil.createErrorResponse(errors);
         }
-        responseData.setStatus(true);
-        responseData.getMessage().add("Book added successfully");
-        responseData.setPayload(bookService.save(book));
-        return ResponseEntity.ok(responseData);
+        return ResponseUtil.createSuccessResponse(bookService.save(book), "Book added successfully");
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<ResponseData<Book>> updateBook(@Valid @PathVariable Long id, @Valid @RequestBody Book book, Errors errors) {
-        ResponseData<Book> responseData = new ResponseData<>();
-
         if (errors.hasErrors()) {
-            for (ObjectError error : errors.getAllErrors()) {
-                responseData.getMessage().add(error.getDefaultMessage());
-            }
-            responseData.setStatus(false);
-            responseData.setPayload(null);
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(responseData);
+            return ResponseUtil.createErrorResponse(errors);
         }
-
         if (!bookService.existsById(id)) {
-            responseData.setStatus(false);
-            responseData.getMessage().add("Book not found for ID: " + id);
-            responseData.setPayload(null);
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(responseData);
+            return ResponseUtil.createNotFoundResponse("Book not found for ID: " + id);
         }
-
-        book.setId(id); // Ensure the book ID is set to the path variable ID
-        responseData.setStatus(true);
-        responseData.getMessage().add("Book updated successfully");
-        responseData.setPayload(bookService.save(book));
-        return ResponseEntity.ok(responseData);
+        book.setId(id);
+        return ResponseUtil.createSuccessResponse(bookService.save(book), "Book updated successfully");
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<ResponseData<Void>> deleteBook(@PathVariable Long id) {
-        ResponseData<Void> responseData = new ResponseData<>();
-
         if (!bookService.existsById(id)) {
-            responseData.setStatus(false);
-            responseData.getMessage().add("Book not found for ID: " + id);
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(responseData);
+            return ResponseUtil.createNotFoundResponse("Book not found for ID: " + id);
         }
-
         bookService.deleteById(id);
-        responseData.setStatus(true);
-        responseData.getMessage().add("Book deleted successfully");
-        return ResponseEntity.ok(responseData);
+        return ResponseUtil.createSuccessResponse(null, "Book deleted successfully");
     }
 
     // ... other endpoints ...

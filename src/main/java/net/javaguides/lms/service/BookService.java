@@ -34,8 +34,12 @@ public class BookService {
         bookRepository.deleteById(id);
     }
 
-    public List<Book> findByTitle(String title) {
-        return bookRepository.findByTitle(title);
+    public List<Book> findByTitleLike(String title) {
+        return bookRepository.findByTitleLike(title);
+    }
+
+    public List<Book> findByAuthorLike(String author) {
+        return bookRepository.findByAuthorLike(author);
     }
 
     public Book borrowBook(Long bookId, Long userId) {

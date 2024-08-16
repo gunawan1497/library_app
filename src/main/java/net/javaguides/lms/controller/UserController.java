@@ -2,8 +2,10 @@ package net.javaguides.lms.controller;
 
 import jakarta.validation.Valid;
 import net.javaguides.lms.dto.ResponseData;
+import net.javaguides.lms.entity.Book;
 import net.javaguides.lms.entity.User;
 import net.javaguides.lms.service.UserService;
+import net.javaguides.lms.util.ResponseUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -27,81 +29,40 @@ public class UserController {
 
     @GetMapping("/{id}")
     public ResponseEntity<ResponseData<User>> getUser(@PathVariable Long id) {
-        ResponseData<User> responseData = new ResponseData<>();
-
         User user = userService.findById(id);
-        if (user == null) {
-            responseData.setStatus(false);
-            responseData.getMessage().add("User not found for ID: " + id);
-            responseData.setPayload(null);
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(responseData);
-        }
 
-        responseData.setStatus(true);
-        responseData.setPayload(user);
-        return ResponseEntity.ok(responseData);
+        if (user == null) {
+            return ResponseUtil.createNotFoundResponse("User not found for ID: " + id);
+        }
+        return ResponseUtil.createSuccessResponse(user, "User retrieved successfully");
     }
 
     @PostMapping
     public ResponseEntity<ResponseData<User>> addUser(@Valid @RequestBody User user, Errors errors) {
-        ResponseData<User> responseData = new ResponseData<>();
-
         if (errors.hasErrors()) {
-            for (ObjectError error : errors.getAllErrors()) {
-                responseData.getMessage().add(error.getDefaultMessage());
-            }
-            responseData.setStatus(false);
-            responseData.setPayload(null);
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(responseData);
+            return ResponseUtil.createErrorResponse(errors);
         }
-        responseData.setStatus(true);
-        responseData.getMessage().add("User added successfully");
-        responseData.setPayload(userService.save(user));
-        return ResponseEntity.ok(responseData);
+        return ResponseUtil.createSuccessResponse(userService.save(user), "User added successfully");
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<ResponseData<User>> updateUser(@Valid @PathVariable Long id, @Valid @RequestBody User user, Errors errors) {
-        ResponseData<User> responseData = new ResponseData<>();
-
         if (errors.hasErrors()) {
-            for (ObjectError error : errors.getAllErrors()) {
-                responseData.getMessage().add(error.getDefaultMessage());
-            }
-            responseData.setStatus(false);
-            responseData.setPayload(null);
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(responseData);
+            return ResponseUtil.createErrorResponse(errors);
         }
-
         if (!userService.existsById(id)) {
-            responseData.setStatus(false);
-            responseData.getMessage().add("User not found for ID: " + id);
-            responseData.setPayload(null);
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(responseData);
+            return ResponseUtil.createNotFoundResponse("User not found for ID: " + id);
         }
-
-        user.setId(id); // Ensure the user ID is set to the path variable ID
-        responseData.setStatus(true);
-        responseData.getMessage().add("User updated successfully");
-        responseData.setPayload(userService.save(user));
-        return ResponseEntity.ok(responseData);
+        user.setId(id);
+        return ResponseUtil.createSuccessResponse(userService.save(user), "User updated successfully");
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<ResponseData<User>> deleteUser(@PathVariable Long id) {
-        ResponseData<User> responseData = new ResponseData<>();
-
-        User user = userService.findById(id);
-        if (user == null) {
-            responseData.setStatus(false);
-            responseData.getMessage().add("User not found for ID: " + id);
-            responseData.setPayload(null);
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(responseData);
+        if (!userService.existsById(id)) {
+            return ResponseUtil.createNotFoundResponse("User not found for ID: " + id);
         }
-
         userService.deleteById(id);
-        responseData.setStatus(true);
-        responseData.getMessage().add("User deleted successfully");
-        return ResponseEntity.ok(responseData);
+        return ResponseUtil.createSuccessResponse(null, "User deleted successfully");
     }
 }
